@@ -63,6 +63,61 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+.custom-product-inputs {
+  padding: 16px 18px 10px 18px;
+  background: #f7f9fc;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(124, 58, 237, 0.06);
+}
+
+.custom-product-inputs input[type="text"],
+.custom-product-inputs input[type="number"] {
+  width: 100%;
+  padding: 11px 14px;
+  margin-bottom: 8px;
+  border: 1.5px solid #dee0ea;
+  border-radius: 9px;
+  background: #fff;
+  font-size: 1.08em;
+  color: #334155;
+  transition: border-color 0.18s, box-shadow 0.22s;
+  box-shadow: 0 1px 4px rgba(79, 70, 229, 0.05);
+}
+
+.custom-product-inputs input:focus {
+  border-color: #6366f1;
+  outline: none;
+  box-shadow: 0 0 0 3px #EEF2FF;
+}
+
+.custom-product-inputs .btn {
+  margin-right: 8px;
+  min-width: 105px;
+}
+
+.custom-product-inputs .btn-primary {
+  background: linear-gradient(90deg, #6366f1 0%, #4f46e5 100%);
+  color: #fff;
+}
+
+.custom-product-inputs .btn-secondary {
+  background: #f1f5f9;
+  color: #324155;
+}
+
+@media (max-width: 530px) {
+  .custom-product-inputs {
+    padding: 8px 10px 8px 10px;
+    border-radius: 8px;
+  }
+
+  .custom-product-inputs input {
+    font-size: 1em;
+    padding: 8px 10px;
+  }
+}
+
+
 /* ===== Layout ===== */
 .app-layout {
   min-height: 100vh;
@@ -251,6 +306,7 @@ body {
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
   transition: all 0.3s ease;
+
 }
 
 .card:hover {
@@ -285,8 +341,9 @@ body {
 
 .card-actions {
   display: flex;
-  gap: var(--spacing-sm);
-  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: auto;
 }
 
 .card-grid {

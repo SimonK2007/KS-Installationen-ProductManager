@@ -111,7 +111,7 @@ function CustomerList() {
             ) : (
                 <div className="card-grid">
                     {filteredCustomers.map(customer => (
-                        <div key={customer.id} className="card">
+                        <div key={customer.id} className="card" onClick={() => setSelectedCustomer(customer)}>
                             <div className="card-header">
                                 <h3>{customer.name}</h3>
                                 {showArchived && <span className="badge badge-warning">Archiviert</span>}
@@ -133,7 +133,7 @@ function CustomerList() {
                                     </p>
                                 )}
                             </div>
-                            <div className="card-actions">
+                            <div className="card-actions flex justify-end gap-2">
                                 {!showArchived && (
                                     <>
                                         <button

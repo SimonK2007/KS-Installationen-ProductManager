@@ -265,6 +265,39 @@ router.put('/:id/toggle-billed', (req, res) => {
     });
   }
 });
+router.post('/custom', async (req, res) => {
+  const { customer_id, name, price } = req.body;
+  if (!customer_id || !name) {
+    return res.status(400).json({ error: 'Kunden-ID und Produktname sind erforderlich' });
+  }
+  try {
+    // Produkt mit is_custom = 1 anlegen
+    const prodResult = db.prepare(`
+      INSERT INTO products (name, price, is_custom, is_active, is_archived)
+      VALUES (?, ?, 1, 1, 0)
+    `).run(name, price ? price : 0);  // Setze Default-Preis auf 0, falls nicht übergeben
 
+    const productId = prodResult.lastInsertRowid;
+
+    // Nur diesem Kunden zuordnen (Tabellen- und Feldnamen KORREKT!)
+    const custResult = db.prepare(`
+      INSERT INTO customer_products (customer_id, product_id, quantity, is_billed)
+      VALUES (?, ?, 1, 0)
+    `).run(customer_id, productId);
+
+    // Rückgabe: neues Assignment samt Produktdaten
+    const newProductAssignment = db.prepare(`
+      SELECT cp.*, p.name AS product_name, p.price
+      FROM customer_products cp
+      INNER JOIN products p ON cp.product_id = p.id
+      WHERE cp.id = ?
+    `).get(custResult.lastInsertRowid);
+
+    res.status(201).json(newProductAssignment);
+  } catch (error) {
+    console.error('Fehler im Custom-Insert:', error);  // Logge ausführlich!
+    res.status(500).json({ error: 'Fehler beim Hinzufügen des kundenspezifischen Produkts', detail: error.message });
+  }
+});
 
 export default router;

@@ -4,6 +4,7 @@ import { apiCallWithAuth } from '../../services/api';
 import CustomerForm from './CustomerForm';
 import Modal from '../Common/Modal';
 import LoadingSpinner from '../Common/LoadingSpinner';
+import CustomSelectProduct from '../Products/CustomSelectProduct';
 
 function CustomerDetail({ customer, onClose, onUpdate }) {
     const [customerProducts, setCustomerProducts] = useState([]);
@@ -120,16 +121,6 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
         }
     };
 
-    // Produkt als abgerechnet/toggle
-    const handleToggleBilled = async (id) => {
-        try {
-            await apiCallWithAuth(`/customer-products/${id}/toggle-billed`, token, { method: 'PUT' });
-            fetchData();
-        } catch (err) {
-            alert(err.message);
-        }
-    };
-
     // Produkt entfernen
     const handleRemove = async (id) => {
         if (!window.confirm('Produkt wirklich entfernen?')) return;
@@ -150,6 +141,23 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
         ...category,
         products: products.filter(p => p.category_id === category.id)
     }));
+
+    const handleAddCustomProduct = async (name, price) => {
+        try {
+            await apiCallWithAuth('/customer-products/custom', token, {
+                method: "POST",
+                body: JSON.stringify({
+                    customer_id: customer.id,
+                    name,
+                    price: price ? parseFloat(price) : null
+                })
+            });
+            fetchData();
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
 
     return (
         <Modal isOpen={true} onClose={onClose} title={customer.name} size="large">
@@ -190,7 +198,7 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
                     </div>
 
                     <div className="add-product-form">
-                        <select
+                        {/* <select
                             value={selectedProductId}
                             onChange={e => setSelectedProductId(e.target.value)}
                             className="select-input"
@@ -206,7 +214,14 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
                                     ))}
                                 </optgroup>
                             ))}
-                        </select>
+                        </select> */}
+
+                        <CustomSelectProduct
+                            groupedProducts={groupedProducts}
+                            selectedProductId={selectedProductId}
+                            onSelect={setSelectedProductId}
+                            onAddCustomProduct={(name, price) => handleAddCustomProduct(name, price)}
+                        />
                         <button
                             className="btn btn-primary"
                             onClick={handleAddProduct}
@@ -267,12 +282,7 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
                                                     title="Menge erhöhen"
                                                 >+</button>
                                             </div>
-                                            <button
-                                                className={`btn btn-sm ${cp.is_billed ? 'btn-success' : 'btn-warning'}`}
-                                                onClick={() => handleToggleBilled(cp.id)}
-                                            >
-                                                {cp.is_billed ? '✓ Abgerechnet' : 'Nicht abgerechnet'}
-                                            </button>
+
                                             <button
                                                 className="btn btn-sm btn-danger"
                                                 onClick={() => handleRemove(cp.id)}

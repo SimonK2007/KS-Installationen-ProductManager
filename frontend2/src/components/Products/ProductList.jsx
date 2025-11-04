@@ -70,6 +70,17 @@ function ProductList() {
         products: displayProducts.filter(p => p.category_id === category.id)
     }));
 
+    const [openCategories, setOpenCategories] = useState([]); // IDs der geöffneten Kategorien
+
+    const toggleCategory = (categoryId) => {
+        setOpenCategories(prev =>
+            prev.includes(categoryId)
+                ? prev.filter(id => id !== categoryId)
+                : [...prev, categoryId]
+        );
+    };
+
+
     if (loading) return <LoadingSpinner />;
 
     return (
@@ -94,17 +105,32 @@ function ProductList() {
                 </div>
             </div>
 
-            {groupedProducts.map(category => {
-                if (category.products.length === 0) return null;
-                return (
-                    <div key={category.id} className="category-section">
-                        <h2>{category.name}</h2>
-                        {category.description && (
-                            <p className="text-muted">{category.description}</p>
-                        )}
+            {groupedProducts.map(category => (
+                <div key={category.id} className="category-section">
+                    <div
+                        className="category-header"
+                        style={{
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            background: '#f4f4f4',
+                            padding: '8px',
+                            borderRadius: '4px'
+                        }}
+                        onClick={() => toggleCategory(category.id)}
+                    >
+                        <h2 style={{ margin: 0, flex: 1 }}>{category.name}</h2>
+                        <span style={{ marginLeft: 12 }}>
+                            {openCategories.includes(category.id) ? '▲' : '▼'}
+                        </span>
+                    </div>
+                    {category.description && (
+                        <p className="text-muted">{category.description}</p>
+                    )}
+                    {openCategories.includes(category.id) && category.products.length > 0 && (
                         <div className="card-grid">
                             {category.products.map(product => (
-                                <div key={product.id} className="card">
+                                <div key={product.id} className="card" onClick={() => setEditingProduct(product)}>
                                     <div className="card-header">
                                         <h3>{product.name}</h3>
                                         {showArchived && (
@@ -146,15 +172,21 @@ function ProductList() {
                                 </div>
                             ))}
                         </div>
-                    </div>
-                );
-            })}
-
-            {displayProducts.length === 0 && (
-                <div className="empty-state">
-                    <p>{showArchived ? 'Keine archivierten Produkte' : 'Keine Produkte vorhanden'}</p>
+                    )}
+                    {openCategories.includes(category.id) && category.products.length === 0 && (
+                        <div className="empty-state"><p>Keine Produkte vorhanden</p></div>
+                    )}
                 </div>
-            )}
+            ))}
+
+
+            {
+                displayProducts.length === 0 && (
+                    <div className="empty-state">
+                        <p>{showArchived ? 'Keine archivierten Produkte' : 'Keine Produkte vorhanden'}</p>
+                    </div>
+                )
+            }
 
             <Modal
                 isOpen={showAddModal}
@@ -171,24 +203,26 @@ function ProductList() {
                 />
             </Modal>
 
-            {editingProduct && (
-                <Modal
-                    isOpen={true}
-                    onClose={() => setEditingProduct(null)}
-                    title="Produkt bearbeiten"
-                >
-                    <ProductForm
-                        product={editingProduct}
-                        categories={categories}
-                        onSuccess={() => {
-                            setEditingProduct(null);
-                            fetchData();
-                        }}
-                        onCancel={() => setEditingProduct(null)}
-                    />
-                </Modal>
-            )}
-        </div>
+            {
+                editingProduct && (
+                    <Modal
+                        isOpen={true}
+                        onClose={() => setEditingProduct(null)}
+                        title="Produkt bearbeiten"
+                    >
+                        <ProductForm
+                            product={editingProduct}
+                            categories={categories}
+                            onSuccess={() => {
+                                setEditingProduct(null);
+                                fetchData();
+                            }}
+                            onCancel={() => setEditingProduct(null)}
+                        />
+                    </Modal>
+                )
+            }
+        </div >
     );
 }
 

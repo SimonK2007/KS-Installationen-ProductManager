@@ -95,6 +95,10 @@ const initDatabase = () => {
   if (!columnExists('categories', 'is_archived')) {
     db.exec('ALTER TABLE categories ADD COLUMN is_archived INTEGER DEFAULT 0;');
   }
+  if (!columnExists('products', 'is_custom')) {
+    db.exec('ALTER TABLE products ADD COLUMN is_custom INTEGER DEFAULT 0');
+  }
+
 
 
   // Neuen Index anlegen, der is_billed berücksichtigt

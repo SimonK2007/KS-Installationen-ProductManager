@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { apiCallWithAuth } from '../../services/api';
 
+
 function ProductForm({ product = null, categories, onSuccess, onCancel }) {
   const [formData, setFormData] = useState({
     name: '',

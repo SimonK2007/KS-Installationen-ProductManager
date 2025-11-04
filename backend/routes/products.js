@@ -105,6 +105,7 @@ router.get('/all', (req, res) => {
         const products = db.prepare(`
       SELECT p.*, c.name as category_name
       FROM products p
+      WHERE p.is_custom = 0 AND p.is_active = 1 AND p.is_archived = 0
       LEFT JOIN categories c ON p.category_id = c.id
       ORDER BY p.is_active DESC, c.name, p.name
     `).all();
@@ -121,7 +122,7 @@ router.get('/archived/list', (req, res) => {
           SELECT p.*, c.name as category_name
           FROM products p
           LEFT JOIN categories c ON p.category_id = c.id
-          WHERE p.is_archived = 1
+          WHERE p.is_custom = 0 AND p.is_active = 1 AND p.is_archived = 1
           ORDER BY c.name, p.name
         `).all();
         res.json(archived);
