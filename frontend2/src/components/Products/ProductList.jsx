@@ -147,7 +147,10 @@ function ProductList() {
                                                 </button>
                                                 <button
                                                     className="btn btn-sm btn-warning"
-                                                    onClick={() => handleArchive(product.id)}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleArchive(product.id)
+                                                    }}
                                                 >
                                                     Archivieren
                                                 </button>
@@ -156,7 +159,10 @@ function ProductList() {
                                         {showArchived && (
                                             <button
                                                 className="btn btn-sm btn-success"
-                                                onClick={() => handleRestore(product.id)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleRestore(product.id)
+                                                }}
                                             >
                                                 Wiederherstellen
                                             </button>

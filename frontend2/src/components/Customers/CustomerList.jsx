@@ -144,7 +144,10 @@ function CustomerList() {
                                         </button>
                                         <button
                                             className="btn btn-sm btn-warning"
-                                            onClick={() => handleArchive(customer.id)}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleArchive(customer.id)
+                                            }}
                                         >
                                             Archivieren
                                         </button>
@@ -153,7 +156,10 @@ function CustomerList() {
                                 {showArchived && (
                                     <button
                                         className="btn btn-sm btn-success"
-                                        onClick={() => handleRestore(customer.id)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRestore(customer.id)
+                                        }}
                                     >
                                         Wiederherstellen
                                     </button>
@@ -162,7 +168,8 @@ function CustomerList() {
                         </div>
                     ))}
                 </div>
-            )}
+            )
+            }
 
             <Modal
                 isOpen={showAddModal}
@@ -178,14 +185,16 @@ function CustomerList() {
                 />
             </Modal>
 
-            {selectedCustomer && (
-                <CustomerDetail
-                    customer={selectedCustomer}
-                    onClose={() => setSelectedCustomer(null)}
-                    onUpdate={fetchCustomers}
-                />
-            )}
-        </div>
+            {
+                selectedCustomer && (
+                    <CustomerDetail
+                        customer={selectedCustomer}
+                        onClose={() => setSelectedCustomer(null)}
+                        onUpdate={fetchCustomers}
+                    />
+                )
+            }
+        </div >
     );
 }
 
