@@ -349,6 +349,15 @@ body {
   text-overflow: ellipsis;
 }
 
+.category-header {
+  cursor: 'pointer';
+  display: flex;
+  align-items: 'center';
+  background: '#f4f4f4';
+  padding: '8px';
+  border-radius: '6px';
+}
+
 .card-actions {
   display: flex;
   justify-content: flex-end;
@@ -736,7 +745,15 @@ body {
 
 /* ===== Category Section ===== */
 .category-section {
-  margin-bottom: var(--spacing-xl);
+  width: 100%;
+  max-width: none;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: var(--spacing-lg);
+  cursor: pointer;
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--radius-sm);
+  margin-bottom: var(--radius-md);
 }
 
 .category-section h2 {

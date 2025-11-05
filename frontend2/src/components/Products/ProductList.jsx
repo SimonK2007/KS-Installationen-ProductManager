@@ -81,6 +81,7 @@ function ProductList() {
     };
 
 
+
     if (loading) return <LoadingSpinner />;
 
     return (
@@ -109,14 +110,6 @@ function ProductList() {
                 <div key={category.id} className="category-section">
                     <div
                         className="category-header"
-                        style={{
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            background: '#f4f4f4',
-                            padding: '8px',
-                            borderRadius: '6px'
-                        }}
                         onClick={() => toggleCategory(category.id)}
                     >
                         <h2 style={{ margin: 0, flex: 1 }}>{category.name}</h2>
