@@ -5,6 +5,7 @@ import CustomerForm from './CustomerForm';
 import Modal from '../Common/Modal';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import CustomSelectProduct from '../Products/CustomSelectProduct';
+import { Download, DownloadIcon } from 'lucide-react';
 
 function CustomerDetail({ customer, onClose, onUpdate }) {
     const [customerProducts, setCustomerProducts] = useState([]);
@@ -220,6 +221,9 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
                 <div className="products-section">
                     <div className="flex justify-between items-center mb-2">
                         <h3>Zugeordnete Produkte</h3>
+                        <button className="btn btn-export" onClick={handleExportExcel}>
+                            <DownloadIcon size={18} /> Exportieren
+                        </button>
                         <label className="flex items-center cursor-pointer text-sm gap-2 pr-1">
                             <input
                                 type="checkbox"
@@ -335,12 +339,7 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
                             <div className="total-price mt-4 text-right">
                                 <h3>Gesamtpreis: €{totalPrice.toFixed(2)}</h3>
                             </div>
-                            <button
-                                className="btn btn-sm btn-secondary"
-                                onClick={handleExportExcel}
-                            >
-                                Excel exportieren
-                            </button>
+
 
                         </>
                     )}

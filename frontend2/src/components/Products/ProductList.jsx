@@ -115,7 +115,7 @@ function ProductList() {
                             alignItems: 'center',
                             background: '#f4f4f4',
                             padding: '8px',
-                            borderRadius: '4px'
+                            borderRadius: '6px'
                         }}
                         onClick={() => toggleCategory(category.id)}
                     >

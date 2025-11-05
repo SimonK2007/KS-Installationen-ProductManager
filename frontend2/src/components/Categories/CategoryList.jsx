@@ -12,6 +12,10 @@ function CategoryList() {
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showArchived, setShowArchived] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editCategory, setEditCategory] = useState(null);
+
+
     const { token } = useAuth();
 
     useEffect(() => {
@@ -86,7 +90,9 @@ function CategoryList() {
                     </label>
                     <button
                         className="btn btn-primary"
-                        onClick={() => setShowAddModal(true)}
+                        onClick={() => {
+                            setShowAddModal(true);
+                        }}
                     >
                         + Neue Kategorie
                     </button>
@@ -100,13 +106,16 @@ function CategoryList() {
             ) : (
                 <div className="card-grid">
                     {displayCategories.map(category => (
-                        <div key={category.id} className="card">
+                        <div key={category.id} className="card" onClick={() => {
+                            setEditCategory(category);
+                            setShowEditModal(true);
+                        }}>
                             <div className="card-header">
                                 <h3>{category.name}</h3>
                                 <div>
                                     {showArchived && <span className="badge badge-warning">Archiviert</span>}
                                     {!showArchived && (
-                                        <span className="badge badge-info">
+                                        <span className="badge">
                                             {getProductCount(category.id)} Produkte
                                         </span>
                                     )}
@@ -118,18 +127,40 @@ function CategoryList() {
                                 </div>
                             )}
                             <div className="card-actions">
+
+                                {!showArchived && (
+                                    <button
+                                        className="btn btn-sm btn-secondary"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditCategory(category);
+                                            setShowEditModal(true);
+                                        }}
+                                    >
+                                        Bearbeiten
+                                    </button>
+
+                                )}
+
                                 {!showArchived && (
                                     <button
                                         className="btn btn-sm btn-warning"
-                                        onClick={() => handleArchive(category.id)}
-                                    >
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleArchive(category.id)
+                                        }
+                                        }>
                                         Archivieren
                                     </button>
                                 )}
+
                                 {showArchived && (
                                     <button
                                         className="btn btn-sm btn-success"
-                                        onClick={() => handleRestore(category.id)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRestore(category.id)
+                                        }}
                                     >
                                         Wiederherstellen
                                     </button>
@@ -151,8 +182,27 @@ function CategoryList() {
                         fetchData();
                     }}
                     onCancel={() => setShowAddModal(false)}
+                    initialCategory={null}
+                    isEdit={false}
                 />
             </Modal>
+
+            <Modal
+                isOpen={showEditModal}
+                onClose={() => setShowEditModal(false)}
+                title="Kategorie bearbeiten"
+            >
+                <CategoryForm
+                    onSuccess={() => {
+                        setShowEditModal(false);
+                        fetchData();
+                    }}
+                    onCancel={() => setShowEditModal(false)}
+                    initialCategory={editCategory}
+                    isEdit={true}
+                />
+            </Modal>
+
         </div>
     );
 }

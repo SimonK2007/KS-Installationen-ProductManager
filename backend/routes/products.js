@@ -53,6 +53,48 @@ router.put('/categories/:id/restore', (req, res) => {
     }
 });
 
+// Kategorie aktualisieren
+router.put('/categories/:id', (req, res) => {
+    try {
+        const { name, description } = req.body;
+
+        if (!name) {
+            return res.status(400).json({
+                error: 'Name ist erforderlich'
+            });
+        }
+
+        // Prüfen ob Kategorie existiert
+        const existing = db.prepare('SELECT * FROM categories WHERE id = ?')
+            .get(req.params.id);
+
+        if (!existing) {
+            return res.status(404).json({
+                error: 'Kategorie nicht gefunden'
+            });
+        }
+
+        // Kategorie aktualisieren
+        db.prepare(`
+            UPDATE categories 
+            SET name = ?, description = ?
+            WHERE id = ?
+        `).run(name, description, req.params.id);
+
+        // Aktualisierte Kategorie zurückgeben
+        const updatedCategory = db.prepare('SELECT * FROM categories WHERE id = ?')
+            .get(req.params.id);
+
+        res.json(updatedCategory);
+    } catch (error) {
+        res.status(500).json({
+            error: 'Fehler beim Aktualisieren der Kategorie',
+            detail: error.message
+        });
+    }
+});
+
+
 
 // Produkt aktiv/inaktiv toggeln
 router.put('/:id/toggle-active', (req, res) => {

@@ -1,12 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { apiCallWithAuth } from '../../services/api';
 
-function CategoryForm({ onSuccess, onCancel }) {
+function CategoryForm({ onSuccess, onCancel, initialCategory, isEdit }) {
     const [formData, setFormData] = useState({
         name: '',
         description: ''
     });
+
+    useEffect(() => {
+        if (isEdit && initialCategory) {
+            setFormData({
+                name: initialCategory.name || '',
+                description: initialCategory.description || ''
+            });
+        } else {
+            setFormData({
+                name: '',
+                description: ''
+            });
+        }
+    }, [initialCategory, isEdit]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const { token } = useAuth();
@@ -24,10 +38,19 @@ function CategoryForm({ onSuccess, onCancel }) {
         setLoading(true);
 
         try {
-            await apiCallWithAuth('/products/categories', token, {
-                method: 'POST',
-                body: JSON.stringify(formData)
-            });
+            if (isEdit && initialCategory) {
+                // PUT für Update
+                await apiCallWithAuth(`/products/categories/${initialCategory.id}`, token, {
+                    method: 'PUT',
+                    body: JSON.stringify(formData)
+                });
+            } else {
+                // POST wie bisher
+                await apiCallWithAuth('/products/categories', token, {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+            }
             onSuccess();
         } catch (err) {
             setError(err.message);
@@ -35,6 +58,7 @@ function CategoryForm({ onSuccess, onCancel }) {
             setLoading(false);
         }
     };
+
 
     return (
         <form onSubmit={handleSubmit} className="form">
@@ -73,7 +97,7 @@ function CategoryForm({ onSuccess, onCancel }) {
                     type="submit"
                     className="btn btn-primary"
                     disabled={loading}
-                >{loading ? 'Lädt...' : 'Erstellen'}</button>
+                >{loading ? 'Lädt...' : 'Fertig'}</button>
             </div>
         </form>
     );
