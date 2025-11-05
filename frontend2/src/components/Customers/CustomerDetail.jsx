@@ -158,6 +158,40 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
         }
     };
 
+    const handleExportExcel = async () => {
+        try {
+            // fetch statt apiCallWithAuth, da letzterer evtl. auto-JSON erwartet!
+            const response = await fetch(
+                `/api/customer-products/export/excel/${customer.id}`,
+                {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+            if (!response.ok) throw new Error("Export fehlgeschlagen");
+
+            const blob = await response.blob();
+            // Download-Link erzeugen
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute(
+                "download",
+                `Kundendaten-${customer.name}.xlsx`
+            );
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            alert('Excel-Export fehlgeschlagen: ' + err.message);
+        }
+    };
+
+
+
 
     return (
         <Modal isOpen={true} onClose={onClose} title={customer.name} size="large">
@@ -301,6 +335,13 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
                             <div className="total-price mt-4 text-right">
                                 <h3>Gesamtpreis: €{totalPrice.toFixed(2)}</h3>
                             </div>
+                            <button
+                                className="btn btn-sm btn-secondary"
+                                onClick={handleExportExcel}
+                            >
+                                Excel exportieren
+                            </button>
+
                         </>
                     )}
                 </div>

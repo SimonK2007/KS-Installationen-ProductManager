@@ -1,6 +1,8 @@
 import express from 'express';
 import db from '../database/db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import XLSX from 'xlsx-js-style';
+
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -299,5 +301,124 @@ router.post('/custom', async (req, res) => {
     res.status(500).json({ error: 'Fehler beim Hinzufügen des kundenspezifischen Produkts', detail: error.message });
   }
 });
+
+
+router.get('/export/excel/:customerId', async (req, res) => {
+  try {
+    const customerId = req.params.customerId;
+
+    // Kundendaten holen
+    const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
+    if (!customer) {
+      return res.status(404).json({ error: 'Kunde nicht gefunden' });
+    }
+
+    // Produktdaten holen
+    const productRows = db.prepare(`
+      SELECT
+        cp.*,
+        p.name AS productname,
+        p.price,
+        c.name AS categoryname
+      FROM customer_products cp
+      INNER JOIN products p ON cp.product_id = p.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE cp.customer_id = ?
+      ORDER BY c.name, p.name
+    `).all(customerId);
+
+    // Produkte nach Kategorie sortieren
+    const byCategory = {};
+    for (const prod of productRows) {
+      const cat = prod.categoryname || "Sonstige";
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push(prod);
+    }
+
+    // Excel vorbereiten
+    let excelData = [];
+    excelData.push(["Kundendaten"]);
+    for (const [key, value] of Object.entries(customer)) {
+      if (key === "id") continue; // ID auslassen
+      excelData.push([key, value]);
+    }
+    excelData.push([]);
+    excelData.push(["Produkte nach Kategorie"]);
+    let priceSum = 0;
+    let rowInstructions = {}; // Style-Objekte für Zeilen/Sonderfälle
+    let rowIndex = excelData.length;
+
+    for (const [kategorie, produkte] of Object.entries(byCategory)) {
+      // Kategorie fett
+      excelData.push([kategorie]);
+      rowInstructions[rowIndex] = { A: { font: { bold: true, sz: 13 } } };
+      rowIndex++;
+
+      // Kopfzeile (Menge kursiv)
+      excelData.push(["Produktname", "Menge", "Preis"]);
+      rowInstructions[rowIndex] = {
+        B: { font: { italic: true } }
+      };
+      rowIndex++;
+
+      for (const p of produkte) {
+        excelData.push([p.productname, p.quantity, p.price]);
+        // Preis aufsummieren, falls gesetzt
+        if (typeof p.price === "number" && !isNaN(p.price)) priceSum += p.price * p.quantity;
+        // Preisfeld rot, falls nicht vorhanden
+        if (!p.price) {
+          rowInstructions[rowIndex] = { C: { fill: { fgColor: { rgb: "FFC7CE" } } } };
+        }
+        rowIndex++;
+      }
+      excelData.push([]);
+      rowIndex++;
+    }
+
+    // Gesamtpreis unten anfügen
+    excelData.push(["", "Gesamtpreis", priceSum]);
+    rowInstructions[rowIndex] = { C: { font: { bold: true } } };
+    rowIndex++;
+
+    // Sheet generieren
+    const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+
+    // Zellen-Stile anwenden
+    Object.entries(rowInstructions).forEach(([r, cols]) => {
+      for (const [col, style] of Object.entries(cols)) {
+        const cellRef = col + (parseInt(r) + 1); // Achtung: Excel 1-basiert
+        if (worksheet[cellRef]) worksheet[cellRef].s = style;
+      }
+    });
+
+    // Spaltenbreite erhöhen
+    worksheet["!cols"] = [
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 12 }
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Kunde");
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "buffer" });
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=Kundendaten-${customerId}.xlsx`
+    );
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.send(excelBuffer);
+
+  } catch (err) {
+    console.error("Fehler beim Excel-Export:", err);
+    res.status(500).json({ error: "Fehler beim Export" });
+  }
+});
+
+
+
 
 export default router;
