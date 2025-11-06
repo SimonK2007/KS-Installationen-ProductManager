@@ -4,24 +4,19 @@ import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 router.use(authenticateToken);
-router.delete('/categories/:id', (req, res) => {
-    try {
-        db.prepare('UPDATE categories SET is_archived = 1 WHERE id = ?')
-            .run(req.params.id);
-        res.json({ message: 'Kategorie archiviert' });
-    } catch (error) {
-        res.status(500).json({ error: 'Fehler beim Archivieren der Kategorie' });
-    }
-});
 
-// Nur aktive Kategorien anzeigen
+// ========================================
+// KATEGORIE-ROUTEN (mit Hierarchie)
+// ========================================
+
+// Nur aktive Kategorien anzeigen (inkl. parent_id)
 router.get('/categories', (req, res) => {
     try {
         const categories = db.prepare(`
-          SELECT * FROM categories
-          WHERE is_archived = 0
-          ORDER BY name
-        `).all();
+      SELECT * FROM categories
+      WHERE is_archived = 0
+      ORDER BY name
+    `).all();
         res.json(categories);
     } catch (error) {
         res.status(500).json({ error: 'Fehler beim Abrufen der Kategorien' });
@@ -32,17 +27,86 @@ router.get('/categories', (req, res) => {
 router.get('/categories/archived', (req, res) => {
     try {
         const archived = db.prepare(`
-          SELECT * FROM categories
-          WHERE is_archived = 1
-          ORDER BY name
-        `).all();
+      SELECT * FROM categories
+      WHERE is_archived = 1
+      ORDER BY name
+    `).all();
         res.json(archived);
     } catch (error) {
         res.status(500).json({ error: 'Fehler beim Abrufen archivierter Kategorien' });
     }
 });
 
-// Wiederherstellen
+// Neue Kategorie erstellen (mit parent_id)
+router.post('/categories', (req, res) => {
+    try {
+        const { name, description, parent_id } = req.body;
+        if (!name) {
+            return res.status(400).json({ error: 'Name ist erforderlich' });
+        }
+
+        const result = db.prepare(
+            'INSERT INTO categories (name, description, parent_id) VALUES (?, ?, ?)'
+        ).run(name, description, parent_id || null);
+
+        const newCategory = db.prepare('SELECT * FROM categories WHERE id = ?')
+            .get(result.lastInsertRowid);
+        res.status(201).json(newCategory);
+    } catch (error) {
+        res.status(500).json({ error: 'Fehler beim Erstellen der Kategorie' });
+    }
+});
+
+// Kategorie aktualisieren (inkl. parent_id)
+router.put('/categories/:id', (req, res) => {
+    try {
+        const { name, description, parent_id } = req.body;
+        if (!name) {
+            return res.status(400).json({
+                error: 'Name ist erforderlich'
+            });
+        }
+
+        // Prüfen ob Kategorie existiert
+        const existing = db.prepare('SELECT * FROM categories WHERE id = ?')
+            .get(req.params.id);
+        if (!existing) {
+            return res.status(404).json({
+                error: 'Kategorie nicht gefunden'
+            });
+        }
+
+        // Kategorie aktualisieren
+        db.prepare(`
+      UPDATE categories
+      SET name = ?, description = ?, parent_id = ?
+      WHERE id = ?
+    `).run(name, description, parent_id || null, req.params.id);
+
+        // Aktualisierte Kategorie zurückgeben
+        const updatedCategory = db.prepare('SELECT * FROM categories WHERE id = ?')
+            .get(req.params.id);
+        res.json(updatedCategory);
+    } catch (error) {
+        res.status(500).json({
+            error: 'Fehler beim Aktualisieren der Kategorie',
+            detail: error.message
+        });
+    }
+});
+
+// Kategorie archivieren
+router.delete('/categories/:id', (req, res) => {
+    try {
+        db.prepare('UPDATE categories SET is_archived = 1 WHERE id = ?')
+            .run(req.params.id);
+        res.json({ message: 'Kategorie archiviert' });
+    } catch (error) {
+        res.status(500).json({ error: 'Fehler beim Archivieren der Kategorie' });
+    }
+});
+
+// Kategorie wiederherstellen
 router.put('/categories/:id/restore', (req, res) => {
     try {
         db.prepare('UPDATE categories SET is_archived = 0 WHERE id = ?')
@@ -53,48 +117,108 @@ router.put('/categories/:id/restore', (req, res) => {
     }
 });
 
-// Kategorie aktualisieren
-router.put('/categories/:id', (req, res) => {
+// ========================================
+// PRODUKT-ROUTEN
+// ========================================
+
+// Nur aktive Produkte abrufen
+router.get('/', (req, res) => {
     try {
-        const { name, description } = req.body;
-
-        if (!name) {
-            return res.status(400).json({
-                error: 'Name ist erforderlich'
-            });
-        }
-
-        // Prüfen ob Kategorie existiert
-        const existing = db.prepare('SELECT * FROM categories WHERE id = ?')
-            .get(req.params.id);
-
-        if (!existing) {
-            return res.status(404).json({
-                error: 'Kategorie nicht gefunden'
-            });
-        }
-
-        // Kategorie aktualisieren
-        db.prepare(`
-            UPDATE categories 
-            SET name = ?, description = ?
-            WHERE id = ?
-        `).run(name, description, req.params.id);
-
-        // Aktualisierte Kategorie zurückgeben
-        const updatedCategory = db.prepare('SELECT * FROM categories WHERE id = ?')
-            .get(req.params.id);
-
-        res.json(updatedCategory);
+        const products = db.prepare(`
+      SELECT p.*, c.name as category_name
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.is_active = 1 AND p.is_archived = 0
+      ORDER BY c.name, p.name
+    `).all();
+        res.json(products);
     } catch (error) {
-        res.status(500).json({
-            error: 'Fehler beim Aktualisieren der Kategorie',
-            detail: error.message
-        });
+        res.status(500).json({ error: 'Fehler beim Abrufen der Produkte' });
     }
 });
 
+// Alle Produkte abrufen (inkl. inaktive, ohne custom)
+router.get('/all', (req, res) => {
+    try {
+        const products = db.prepare(`
+      SELECT p.*, c.name as category_name
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.is_custom = 0 AND p.is_archived = 0
+      ORDER BY p.is_active DESC, c.name, p.name
+    `).all();
+        res.json(products);
+    } catch (error) {
+        res.status(500).json({ error: 'Fehler beim Abrufen der Produkte' });
+    }
+});
 
+// Archivierte Produkte
+router.get('/archived/list', (req, res) => {
+    try {
+        const archived = db.prepare(`
+      SELECT p.*, c.name as category_name
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.is_custom = 0 AND p.is_archived = 1
+      ORDER BY c.name, p.name
+    `).all();
+        res.json(archived);
+    } catch (error) {
+        res.status(500).json({ error: 'Fehler beim Abrufen der archivierten Produkte' });
+    }
+});
+
+// Neues Produkt erstellen
+router.post('/', (req, res) => {
+    try {
+        const { name, category_id, price, description } = req.body;
+        if (!name || !category_id) {
+            return res.status(400).json({
+                error: 'Name und Kategorie sind erforderlich'
+            });
+        }
+
+        const result = db.prepare(`
+      INSERT INTO products (name, category_id, price, description)
+      VALUES (?, ?, ?, ?)
+    `).run(name, category_id, price || 0, description);
+
+        const newProduct = db.prepare(`
+      SELECT p.*, c.name as category_name
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.id = ?
+    `).get(result.lastInsertRowid);
+
+        res.status(201).json(newProduct);
+    } catch (error) {
+        res.status(500).json({ error: 'Fehler beim Erstellen des Produkts' });
+    }
+});
+
+// Produkt aktualisieren
+router.put('/:id', (req, res) => {
+    try {
+        const { name, category_id, price, description } = req.body;
+        db.prepare(`
+      UPDATE products
+      SET name = ?, category_id = ?, price = ?, description = ?
+      WHERE id = ?
+    `).run(name, category_id, price, description, req.params.id);
+
+        const updatedProduct = db.prepare(`
+      SELECT p.*, c.name as category_name
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.id = ?
+    `).get(req.params.id);
+
+        res.json(updatedProduct);
+    } catch (error) {
+        res.status(500).json({ error: 'Fehler beim Aktualisieren des Produkts' });
+    }
+});
 
 // Produkt aktiv/inaktiv toggeln
 router.put('/:id/toggle-active', (req, res) => {
@@ -108,127 +232,6 @@ router.put('/:id/toggle-active', (req, res) => {
     }
 });
 
-
-// Neue Kategorie erstellen
-router.post('/categories', (req, res) => {
-    try {
-        const { name, description } = req.body;
-        if (!name) {
-            return res.status(400).json({ error: 'Name ist erforderlich' });
-        }
-        const result = db.prepare(
-            'INSERT INTO categories (name, description) VALUES (?, ?)'
-        ).run(name, description);
-        const newCategory = db.prepare('SELECT * FROM categories WHERE id = ?')
-            .get(result.lastInsertRowid);
-        res.status(201).json(newCategory);
-    } catch (error) {
-        res.status(500).json({ error: 'Fehler beim Erstellen der Kategorie' });
-    }
-});
-router.get('/', (req, res) => {
-    try {
-        const products = db.prepare(`
-          SELECT p.*, c.name as category_name
-          FROM products p
-          LEFT JOIN categories c ON p.category_id = c.id
-          WHERE p.is_active = 1 AND p.is_archived = 0
-          ORDER BY c.name, p.name
-        `).all();
-        res.json(products);
-    } catch (error) {
-        res.status(500).json({ error: 'Fehler beim Abrufen der Produkte' });
-    }
-});
-
-// Alle Produkte abrufen (inkl. inaktive)
-router.get('/all', (req, res) => {
-    try {
-        const products = db.prepare(`
-      SELECT p.*, c.name as category_name
-      FROM products p
-      WHERE p.is_custom = 0 AND p.is_active = 1 AND p.is_archived = 0
-      LEFT JOIN categories c ON p.category_id = c.id
-      ORDER BY p.is_active DESC, c.name, p.name
-    `).all();
-        res.json(products);
-    } catch (error) {
-        res.status(500).json({ error: 'Fehler beim Abrufen der Produkte' });
-    }
-});
-
-// Archivierte Produkte
-router.get('/archived/list', (req, res) => {
-    try {
-        const archived = db.prepare(`
-          SELECT p.*, c.name as category_name
-          FROM products p
-          LEFT JOIN categories c ON p.category_id = c.id
-          WHERE p.is_custom = 0 AND p.is_active = 1 AND p.is_archived = 1
-          ORDER BY c.name, p.name
-        `).all();
-        res.json(archived);
-    } catch (error) {
-        res.status(500).json({ error: 'Fehler beim Abrufen der archivierten Produkte' });
-    }
-});
-
-// Wiederherstellen
-router.put('/:id/restore', (req, res) => {
-    try {
-        db.prepare('UPDATE products SET is_archived = 0 WHERE id = ?')
-            .run(req.params.id);
-        res.json({ message: 'Produkt reaktiviert' });
-    } catch (error) {
-        res.status(500).json({ error: 'Fehler beim Wiederherstellen' });
-    }
-});
-
-
-// Neues Produkt erstellen
-router.post('/', (req, res) => {
-    try {
-        const { name, category_id, price, description } = req.body;
-        if (!name || !category_id) {
-            return res.status(400).json({
-                error: 'Name und Kategorie sind erforderlich'
-            });
-        }
-        const result = db.prepare(`
-      INSERT INTO products (name, category_id, price, description)
-      VALUES (?, ?, ?, ?)
-`).run(name, category_id, price || 0, description);
-        const newProduct = db.prepare(`
- SELECT p.*, c.name as category_name
- FROM products p
- LEFT JOIN categories c ON p.category_id = c.id
- WHERE p.id = ?
- `).get(result.lastInsertRowid);
-        res.status(201).json(newProduct);
-    } catch (error) {
-        res.status(500).json({ error: 'Fehler beim Erstellen des Produkts' });
-    }
-});
-// Produkt aktualisieren
-router.put('/:id', (req, res) => {
-    try {
-        const { name, category_id, price, description } = req.body;
-        db.prepare(`
- UPDATE products 
-SET name = ?, category_id = ?, price = ?, description = ?
- WHERE id = ?
- `).run(name, category_id, price, description, req.params.id);
-        const updatedProduct = db.prepare(`
- SELECT p.*, c.name as category_name
- FROM products p
- LEFT JOIN categories c ON p.category_id = c.id
- WHERE p.id = ?
- `).get(req.params.id);
-        res.json(updatedProduct);
-    } catch (error) {
-        res.status(500).json({ error: 'Fehler beim Aktualisieren des Produkts' });
-    }
-});
 // Produkt archivieren
 router.delete('/:id', (req, res) => {
     try {
@@ -237,6 +240,17 @@ router.delete('/:id', (req, res) => {
         res.json({ message: 'Produkt archiviert' });
     } catch (error) {
         res.status(500).json({ error: 'Fehler beim Archivieren des Produkts' });
+    }
+});
+
+// Produkt wiederherstellen
+router.put('/:id/restore', (req, res) => {
+    try {
+        db.prepare('UPDATE products SET is_archived = 0 WHERE id = ?')
+            .run(req.params.id);
+        res.json({ message: 'Produkt reaktiviert' });
+    } catch (error) {
+        res.status(500).json({ error: 'Fehler beim Wiederherstellen' });
     }
 });
 

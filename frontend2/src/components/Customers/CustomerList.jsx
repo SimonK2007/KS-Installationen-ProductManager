@@ -35,6 +35,7 @@ function CustomerList() {
         } catch (err) {
             setError(err.message);
         } finally {
+            console.log(customers)
             setLoading(false);
         }
     };
@@ -66,6 +67,7 @@ function CustomerList() {
         customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customer.phone?.includes(searchTerm)
+
     );
 
     if (loading) return <LoadingSpinner />;

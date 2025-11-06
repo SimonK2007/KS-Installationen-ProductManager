@@ -15,7 +15,6 @@ function CategoryList() {
     const [showEditModal, setShowEditModal] = useState(false);
     const [editCategory, setEditCategory] = useState(null);
 
-
     const { token } = useAuth();
 
     useEffect(() => {
@@ -75,6 +74,14 @@ function CategoryList() {
 
     if (loading) return <LoadingSpinner />;
 
+    // 🔍 DEBUGGING: Console-Logs hinzufügen
+    console.log('CategoryList Render:', {
+        showAddModal,
+        showEditModal,
+        editCategory,
+        categoriesCount: displayCategories.length
+    });
+
     return (
         <div className="page-container">
             <div className="page-header">
@@ -91,7 +98,9 @@ function CategoryList() {
                     <button
                         className="btn btn-primary"
                         onClick={() => {
+                            console.log('🆕 Neue Kategorie Button geklickt');
                             setShowAddModal(true);
+                            console.log('showAddModal nach setzen:', true);
                         }}
                     >
                         + Neue Kategorie
@@ -107,6 +116,7 @@ function CategoryList() {
                 <div className="card-grid">
                     {displayCategories.map(category => (
                         <div key={category.id} className="card" onClick={() => {
+                            console.log('📝 Card geklickt:', category);
                             setEditCategory(category);
                             setShowEditModal(true);
                         }}>
@@ -127,19 +137,19 @@ function CategoryList() {
                                 </div>
                             )}
                             <div className="card-actions">
-
                                 {!showArchived && (
                                     <button
                                         className="btn btn-sm btn-secondary"
                                         onClick={(e) => {
                                             e.stopPropagation();
+                                            console.log('✏️ Bearbeiten Button geklickt:', category);
                                             setEditCategory(category);
                                             setShowEditModal(true);
+                                            console.log('States gesetzt:', { showEditModal: true, editCategory: category });
                                         }}
                                     >
                                         Bearbeiten
                                     </button>
-
                                 )}
 
                                 {!showArchived && (
@@ -148,8 +158,8 @@ function CategoryList() {
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleArchive(category.id)
-                                        }
-                                        }>
+                                        }}
+                                    >
                                         Archivieren
                                     </button>
                                 )}
@@ -171,17 +181,26 @@ function CategoryList() {
                 </div>
             )}
 
+            {/* 🔍 DEBUGGING: Beide Modal-Prop-Varianten testen */}
             <Modal
                 isOpen={showAddModal}
-                onClose={() => setShowAddModal(false)}
+                show={showAddModal}
+                onClose={() => {
+                    console.log('❌ Add Modal schließen');
+                    setShowAddModal(false);
+                }}
                 title="Neue Kategorie"
             >
                 <CategoryForm
                     onSuccess={() => {
+                        console.log('✅ Kategorie erfolgreich hinzugefügt');
                         setShowAddModal(false);
                         fetchData();
                     }}
-                    onCancel={() => setShowAddModal(false)}
+                    onCancel={() => {
+                        console.log('🚫 Abgebrochen');
+                        setShowAddModal(false);
+                    }}
                     initialCategory={null}
                     isEdit={false}
                 />
@@ -189,20 +208,30 @@ function CategoryList() {
 
             <Modal
                 isOpen={showEditModal}
-                onClose={() => setShowEditModal(false)}
+                show={showEditModal}
+                onClose={() => {
+                    console.log('❌ Edit Modal schließen');
+                    setShowEditModal(false);
+                    setEditCategory(null);
+                }}
                 title="Kategorie bearbeiten"
             >
                 <CategoryForm
                     onSuccess={() => {
+                        console.log('✅ Kategorie erfolgreich bearbeitet');
                         setShowEditModal(false);
+                        setEditCategory(null);
                         fetchData();
                     }}
-                    onCancel={() => setShowEditModal(false)}
+                    onCancel={() => {
+                        console.log('🚫 Bearbeiten abgebrochen');
+                        setShowEditModal(false);
+                        setEditCategory(null);
+                    }}
                     initialCategory={editCategory}
                     isEdit={true}
                 />
             </Modal>
-
         </div>
     );
 }

@@ -5,7 +5,7 @@ import CustomerForm from './CustomerForm';
 import Modal from '../Common/Modal';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import CustomSelectProduct from '../Products/CustomSelectProduct';
-import { Download, DownloadIcon } from 'lucide-react';
+import { DownloadIcon } from 'lucide-react';
 
 function CustomerDetail({ customer, onClose, onUpdate }) {
     const [customerProducts, setCustomerProducts] = useState([]);
@@ -15,6 +15,8 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedProductId, setSelectedProductId] = useState('');
     const [localQuantities, setLocalQuantities] = useState({});
+    // NEU: State für die ursprünglichen Mengen, um Änderungen zu erkennen
+    const [initialQuantities, setInitialQuantities] = useState({});
     const [localMode, setLocalMode] = useState(false); // Offline-Modus
     const { token } = useAuth();
 
@@ -34,10 +36,15 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
             setCustomerProducts(cpData);
             setProducts(pData);
             setCategories(cData);
+
             // Local quantities für Offline-Modus
             const q = {};
             cpData.forEach(cp => q[cp.id] = cp.quantity);
+
             setLocalQuantities(q);
+            // NEU: Ursprüngliche Mengen speichern, um Änderungen zu verfolgen
+            setInitialQuantities(q);
+
         } catch (err) {
             alert(err.message);
         } finally {
@@ -63,42 +70,25 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
         }
     };
 
-    // Menge erhöhen im Online/Offline-Modus
-    const handleIncrease = async (id) => {
-        if (localMode) {
-            setLocalQuantities(prev => ({
-                ...prev,
-                [id]: Number(prev[id] || 0) + 1
-            }));
-        } else {
-            try {
-                await apiCallWithAuth(`/customer-products/${id}/increase`, token, { method: 'PUT' });
-                fetchData();
-            } catch (err) {
-                alert(err.message);
-            }
-        }
+    // Menge erhöhen im Online/Offline-Modus (lokal)
+    const handleIncrease = (id) => {
+        setLocalQuantities(prev => ({
+            ...prev,
+            [id]: Number(prev[id] || 0) + 1
+        }));
     };
 
-    // Menge reduzieren im Online/Offline-Modus
-    const handleDecrease = async (id) => {
-        if (localMode) {
-            setLocalQuantities(prev => ({
-                ...prev,
-                [id]: Math.max(0, Number(prev[id] || 0) - 1)
-            }));
-        } else {
-            try {
-                await apiCallWithAuth(`/customer-products/${id}/decrease`, token, { method: 'PUT' });
-                fetchData();
-            } catch (err) {
-                alert(err.message);
-            }
-        }
+    // Menge reduzieren (nur lokal)
+    const handleDecrease = (id) => {
+        setLocalQuantities(prev => ({
+            ...prev,
+            [id]: Math.max(0, Number(prev[id] || 0) - 1)
+        }));
     };
 
     // Menge im Offline-Modus bearbeiten
     const handleLocalChange = (id, newQuantity) => {
+        // newQuantity kommt als String vom Input, muss zu Number konvertiert werden
         setLocalQuantities(prev => ({
             ...prev,
             [id]: Math.max(0, Number(newQuantity))
@@ -115,6 +105,8 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
                 method: 'PUT',
                 body: JSON.stringify({ updates })
             });
+
+            // Nach erfolgreichem Speichern Daten neu laden und initialQuantities aktualisieren
             fetchData();
             alert('Änderungen gespeichert!');
         } catch (err) {
@@ -134,13 +126,14 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
     };
 
     const totalPrice = customerProducts.reduce(
+        // Verwende localQuantities für die Berechnung, falle auf cp.quantity zurück (obwohl initialQuantities besser wäre, aber lokale Mengen sind die aktuellsten)
         (sum, cp) => sum + (cp.price || 0) * (localQuantities[cp.id] ?? cp.quantity),
         0
     );
 
     const groupedProducts = categories.map(category => ({
         ...category,
-        products: products.filter(p => p.category_id === category.id)
+        products: products.filter(p => p.price && p.category_id === category.id)
     }));
 
     const handleAddCustomProduct = async (name, price) => {
@@ -192,8 +185,6 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
     };
 
 
-
-
     return (
         <Modal isOpen={true} onClose={onClose} title={customer.name} size="large">
             <div className="customer-detail">
@@ -224,36 +215,10 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
                         <button className="btn btn-export" onClick={handleExportExcel}>
                             <DownloadIcon size={18} /> Exportieren
                         </button>
-                        <label className="flex items-center cursor-pointer text-sm gap-2 pr-1">
-                            <input
-                                type="checkbox"
-                                checked={localMode}
-                                onChange={() => setLocalMode(!localMode)}
-                                style={{ accentColor: "#4F46E5" }}
-                            />
-                            <span>Offline-Modus</span>
-                        </label>
+
                     </div>
 
                     <div className="add-product-form">
-                        {/* <select
-                            value={selectedProductId}
-                            onChange={e => setSelectedProductId(e.target.value)}
-                            className="select-input"
-                            style={{ marginRight: 8, minWidth: 180 }}
-                        >
-                            <option value="">Produkt auswählen...</option>
-                            {groupedProducts.map(category => (
-                                <optgroup key={category.id} label={category.name}>
-                                    {category.products.map(product => (
-                                        <option key={product.id} value={product.id}>
-                                            {product.name} - €{product.price || 0}
-                                        </option>
-                                    ))}
-                                </optgroup>
-                            ))}
-                        </select> */}
-
                         <CustomSelectProduct
                             groupedProducts={groupedProducts}
                             selectedProductId={selectedProductId}
@@ -279,17 +244,16 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
                                 {customerProducts.map(cp => (
                                     <div key={cp.id} className={`product-item flex flex-col md:flex-row md:items-center justify-between gap-2 p-3 mb-2 rounded-lg border${cp.is_billed ? ' billed' : ''}`}>
                                         <div className="product-info">
-                                            <h4>{cp.product_name}</h4>
+                                            <h4>{cp.product_name} <button
+                                                className="btn btn-sm btn-danger"
+                                                onClick={() => handleRemove(cp.id)}
+                                            >×</button></h4>
                                             <p className="text-muted">{cp.category_name}</p>
-                                            <p>
-                                                €{cp.price || 0} × {localQuantities[cp.id] ?? cp.quantity} = €
-                                                {(cp.price || 0) * (localQuantities[cp.id] ?? cp.quantity)}
-                                            </p>
                                         </div>
                                         <div className="product-actions flex items-center gap-2">
                                             <div className="quantity-controls flex items-center gap-1">
                                                 <button
-                                                    className="btn btn-sm btn-icon"
+                                                    className="btn btn-lg btn-icon"
                                                     onClick={() => handleDecrease(cp.id)}
                                                     title="Menge verringern"
                                                 >−</button>
@@ -297,50 +261,36 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
                                                     type="number"
                                                     min="0"
                                                     value={localQuantities[cp.id] ?? cp.quantity}
-                                                    onChange={e => {
-                                                        const newQty = Number(e.target.value);
-                                                        if (localMode) {
-                                                            handleLocalChange(cp.id, newQty);
-                                                        } else {
-                                                            apiCallWithAuth(`/customer-products/${cp.id}`, token, {
-                                                                method: 'PUT',
-                                                                body: JSON.stringify({ quantity: newQty })
-                                                            })
-                                                                .then(fetchData)
-                                                                .catch(err => alert(err.message));
-                                                        }
-                                                    }}
-                                                    className="border rounded-md text-center w-14 px-1 py-0.5 text-sm"
-                                                    style={{ margin: "0 4px" }}
-                                                    disabled={!localMode}
+                                                    onChange={e => handleLocalChange(cp.id, e.target.value)}
+                                                    className="border rounded-md text-center w-1 px-1 py-0.5 text-sm"
+                                                    style={{ margin: "0 4px", width: "80px" }}
                                                 />
                                                 <button
-                                                    className="btn btn-sm btn-icon"
+                                                    className="btn btn-lg btn-icon"
                                                     onClick={() => handleIncrease(cp.id)}
                                                     title="Menge erhöhen"
                                                 >+</button>
-                                            </div>
 
-                                            <button
-                                                className="btn btn-sm btn-danger"
-                                                onClick={() => handleRemove(cp.id)}
-                                            >×</button>
+                                                {/* NEU: Bedingtes Rendern des Speichern-Buttons */}
+                                                {/* Zeige Button nur, wenn sich die lokale Menge von der initialen Menge unterscheidet */}
+                                                {Number(localQuantities[cp.id] ?? cp.quantity) !== Number(initialQuantities[cp.id] ?? cp.quantity) && (
+                                                    <div className="text-right mt-2">
+                                                        <button
+                                                            className="btn-sm btn-primary ml-2"
+                                                            onClick={handleSyncQuantities}
+                                                        >
+                                                            speichern
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                            {localMode && (
-                                <div className="text-right mt-2">
-                                    <button className="btn btn-primary" onClick={handleSyncQuantities}>
-                                        Änderungen speichern
-                                    </button>
-                                </div>
-                            )}
                             <div className="total-price mt-4 text-right">
                                 <h3>Gesamtpreis: €{totalPrice.toFixed(2)}</h3>
                             </div>
-
-
                         </>
                     )}
                 </div>

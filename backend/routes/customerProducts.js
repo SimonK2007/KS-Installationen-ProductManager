@@ -418,6 +418,28 @@ router.get('/export/excel/:customerId', async (req, res) => {
   }
 });
 
+// In customerProducts.js hinzufügen:
+router.get('/:customerId/details', (req, res) => {
+  try {
+    const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.params.customerId);
+    if (!customer) return res.status(404).json({ error: 'Kunde nicht gefunden' });
+
+    const products = db.prepare(`
+      SELECT cp.*, p.name AS product_name, p.price, c.name AS category_name
+      FROM customer_products cp
+      INNER JOIN products p ON cp.product_id = p.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE cp.customer_id = ?
+      ORDER BY c.name, p.name
+    `).all(req.params.customerId);
+
+    res.json({ customer, customer_products: products });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 
 
 

@@ -44,7 +44,6 @@ function ProductList() {
 
     const handleArchive = async (id) => {
         if (!window.confirm('Produkt wirklich archivieren?')) return;
-
         try {
             await apiCallWithAuth(`/products/${id}`, token, { method: 'DELETE' });
             fetchData();
@@ -55,7 +54,6 @@ function ProductList() {
 
     const handleRestore = async (id) => {
         if (!window.confirm('Produkt wiederherstellen?')) return;
-
         try {
             await apiCallWithAuth(`/products/${id}/restore`, token, { method: 'PUT' });
             fetchData();
@@ -65,12 +63,21 @@ function ProductList() {
     };
 
     const displayProducts = showArchived ? archivedProducts : products;
-    const groupedProducts = categories.map(category => ({
-        ...category,
-        products: displayProducts.filter(p => p.category_id === category.id)
-    }));
 
-    const [openCategories, setOpenCategories] = useState([]); // IDs der geöffneten Kategorien
+    // Hierarchische Gruppierung
+    const getMainCategories = () => {
+        return categories.filter(cat => !cat.parent_id);
+    };
+
+    const getSubCategories = (parentId) => {
+        return categories.filter(cat => cat.parent_id === parentId);
+    };
+
+    const getProductsByCategory = (categoryId) => {
+        return displayProducts.filter(p => p.category_id === categoryId);
+    };
+
+    const [openCategories, setOpenCategories] = useState([]);
 
     const toggleCategory = (categoryId) => {
         setOpenCategories(prev =>
@@ -80,112 +87,168 @@ function ProductList() {
         );
     };
 
-
-
     if (loading) return <LoadingSpinner />;
 
     return (
-        <div className="page-container">
-            <div className="page-header">
+        <div className="content-container">
+            <div className="header-actions">
                 <h1>Produkte</h1>
-                <div>
-                    <label className="toggle-label">
-                        <input
-                            type="checkbox"
-                            checked={showArchived}
-                            onChange={(e) => setShowArchived(e.target.checked)}
-                        />
-                        Archivierte anzeigen
-                    </label>
+                <div className="button-group">
                     <button
-                        className="btn btn-primary"
-                        onClick={() => setShowAddModal(true)}
+                        onClick={() => setShowArchived(!showArchived)}
+                        className="btn btn-secondary"
                     >
-                        + Neues Produkt
+                        {showArchived ? 'Aktive anzeigen' : 'Archiv anzeigen'}
                     </button>
+                    {!showArchived && (
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="btn btn-primary"
+                        >
+                            + Neues Produkt
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {groupedProducts.map(category => (
-                <div key={category.id} className="category-section">
-                    <div
-                        className="category-header"
-                        onClick={() => toggleCategory(category.id)}
-                    >
-                        <h2 style={{ margin: 0, flex: 1 }}>{category.name}</h2>
-                        <span style={{ marginLeft: 12 }}>
-                            {openCategories.includes(category.id) ? '▲' : '▼'}
-                        </span>
-                    </div>
-                    {category.description && (
-                        <p className="text-muted">{category.description}</p>
-                    )}
-                    {openCategories.includes(category.id) && category.products.length > 0 && (
-                        <div className="card-grid">
-                            {category.products.map(product => (
-                                <div key={product.id} className="card" onClick={() => setEditingProduct(product)}>
-                                    <div className="card-header">
-                                        <h3>{product.name}</h3>
-                                        {showArchived && (
-                                            <span className="badge badge-warning">Archiviert</span>
-                                        )}
-                                    </div>
-                                    <div className="card-body">
-                                        <p className="product-price">€{product.price || 0}</p>
-                                        {product.description && (
-                                            <p className="text-muted">{product.description}</p>
-                                        )}
-                                    </div>
-                                    <div className="card-actions">
-                                        {!showArchived && (
-                                            <>
-                                                <button
-                                                    className="btn btn-sm btn-secondary"
-                                                    onClick={() => setEditingProduct(product)}
-                                                >
-                                                    Bearbeiten
-                                                </button>
-                                                <button
-                                                    className="btn btn-sm btn-warning"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleArchive(product.id)
-                                                    }}
-                                                >
-                                                    Archivieren
-                                                </button>
-                                            </>
-                                        )}
-                                        {showArchived && (
-                                            <button
-                                                className="btn btn-sm btn-success"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleRestore(product.id)
-                                                }}
-                                            >
-                                                Wiederherstellen
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {openCategories.includes(category.id) && category.products.length === 0 && (
-                        <div className="empty-state"><p>Keine Produkte vorhanden</p></div>
-                    )}
+            {displayProducts.length === 0 ? (
+                <div className="empty-state">
+                    {showArchived ? 'Keine archivierten Produkte' : 'Keine Produkte vorhanden'}
                 </div>
-            ))}
+            ) : (
+                <div className="products-by-category">
+                    {getMainCategories().map(mainCategory => {
+                        const mainCategoryProducts = getProductsByCategory(mainCategory.id);
+                        const subCategories = getSubCategories(mainCategory.id);
+                        const hasProducts = mainCategoryProducts.length > 0 ||
+                            subCategories.some(sub => getProductsByCategory(sub.id).length > 0);
 
+                        if (!hasProducts) return null;
 
-            {
-                displayProducts.length === 0 && (
-                    <div className="empty-state">
-                        <p>{showArchived ? 'Keine archivierten Produkte' : 'Keine Produkte vorhanden'}</p>
-                    </div>
-                )
-            }
+                        return (
+                            <div key={mainCategory.id} className="category-section">
+                                {/* Hauptkategorie Header */}
+                                <div
+                                    className="category-header-clickable"
+                                    onClick={() => toggleCategory(mainCategory.id)}
+                                >
+                                    <h2>
+                                        <span className={`toggle-icon ${openCategories.includes(mainCategory.id) ? 'open' : ''}`}>
+                                            ▶
+                                        </span>
+                                        {mainCategory.name}
+                                    </h2>
+                                    {mainCategory.description && (
+                                        <p className="category-description">{mainCategory.description}</p>
+                                    )}
+                                </div>
+
+                                {/* Produkte der Hauptkategorie */}
+                                {openCategories.includes(mainCategory.id) && (
+                                    <>
+                                        {mainCategoryProducts.length > 0 && (
+                                            <div className="products-grid">
+                                                {mainCategoryProducts.map(product => (
+                                                    <div key={product.id} className="product-card">
+                                                        <div className="product-header">
+                                                            <h3>{product.name}</h3>
+                                                            <span className="product-price">€{product.price || 0}</span>
+                                                        </div>
+                                                        {product.description && (
+                                                            <p className="product-description">{product.description}</p>
+                                                        )}
+                                                        <div className="product-actions">
+                                                            {!showArchived ? (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => setEditingProduct(product)}
+                                                                        className="btn btn-sm btn-secondary"
+                                                                    >
+                                                                        Bearbeiten
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleArchive(product.id)}
+                                                                        className="btn btn-sm btn-danger"
+                                                                    >
+                                                                        Archivieren
+                                                                    </button>
+                                                                </>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => handleRestore(product.id)}
+                                                                    className="btn btn-sm btn-primary"
+                                                                >
+                                                                    Wiederherstellen
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Unterkategorien */}
+                                        {subCategories.map(subCategory => {
+                                            const subCategoryProducts = getProductsByCategory(subCategory.id);
+                                            if (subCategoryProducts.length === 0) return null;
+
+                                            return (
+                                                <div key={subCategory.id} className="subcategory-section">
+                                                    <h3 className="subcategory-title">
+                                                        ↳ {subCategory.name}
+                                                    </h3>
+                                                    {subCategory.description && (
+                                                        <p className="category-description-small">{subCategory.description}</p>
+                                                    )}
+                                                    <div className="products-grid">
+                                                        {subCategoryProducts.map(product => (
+                                                            <div key={product.id} className="product-card">
+                                                                <div className="product-header">
+                                                                    <h3>{product.name}</h3>
+                                                                    <span className="product-price">€{product.price || 0}</span>
+                                                                </div>
+                                                                {product.description && (
+                                                                    <p className="product-description">{product.description}</p>
+                                                                )}
+                                                                <div className="product-actions">
+                                                                    {!showArchived ? (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={() => setEditingProduct(product)}
+                                                                                className="btn btn-sm btn-secondary"
+                                                                            >
+                                                                                Bearbeiten
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleArchive(product.id)}
+                                                                                className="btn btn-sm btn-danger"
+                                                                            >
+                                                                                Archivieren
+                                                                            </button>
+                                                                        </>
+                                                                    ) : (
+                                                                        <button
+                                                                            onClick={() => handleRestore(product.id)}
+                                                                            className="btn btn-sm btn-primary"
+                                                                        >
+                                                                            Wiederherstellen
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
 
             <Modal
                 isOpen={showAddModal}
@@ -200,28 +263,29 @@ function ProductList() {
                     }}
                     onCancel={() => setShowAddModal(false)}
                 />
+
+
             </Modal>
 
-            {
-                editingProduct && (
-                    <Modal
-                        isOpen={true}
-                        onClose={() => setEditingProduct(null)}
-                        title="Produkt bearbeiten"
-                    >
-                        <ProductForm
-                            product={editingProduct}
-                            categories={categories}
-                            onSuccess={() => {
-                                setEditingProduct(null);
-                                fetchData();
-                            }}
-                            onCancel={() => setEditingProduct(null)}
-                        />
-                    </Modal>
-                )
-            }
-        </div >
+            <Modal
+                isOpen={editingProduct}
+                onClose={() => setEditingProduct(false)}
+                title="Neues Produkt"
+            >
+                <ProductForm
+                    product={editingProduct}
+                    categories={categories}
+                    onSuccess={() => {
+                        setEditingProduct(false);
+                        fetchData();
+                    }}
+                    onCancel={() => setEditingProduct(false)}
+                />
+
+
+            </Modal>
+
+        </div>
     );
 }
 
