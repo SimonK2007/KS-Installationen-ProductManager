@@ -19,6 +19,7 @@ function CustomerList() {
 
     useEffect(() => {
         fetchCustomers();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [showArchived]);
 
     const fetchCustomers = async () => {

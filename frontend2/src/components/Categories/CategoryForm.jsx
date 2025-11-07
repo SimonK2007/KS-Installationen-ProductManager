@@ -31,6 +31,7 @@ function CategoryForm({ onSuccess, onCancel, initialCategory, isEdit }) {
                 parent_id: ''
             });
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialCategory, isEdit]);
 
     const fetchCategories = async () => {

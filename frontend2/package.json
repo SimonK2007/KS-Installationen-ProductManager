@@ -2,7 +2,7 @@
   "name": "frontend2",
   "version": "1.0.0",
   "description": "Modern CRM Frontend with React",
-  "homepage": "https://SimonK2007.github.io/KS-Installationen",
+  "homepage": "https://SimonK2007.github.io/",
   "private": true,
   "dependencies": {
     "lucide-react": "^0.552.0",
