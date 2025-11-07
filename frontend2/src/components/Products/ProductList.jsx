@@ -17,6 +17,7 @@ function ProductList() {
 
     useEffect(() => {
         fetchData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [showArchived]);
 
     const fetchData = async () => {

@@ -17,7 +17,6 @@ function CustomerDetail({ customer, onClose, onUpdate }) {
     const [localQuantities, setLocalQuantities] = useState({});
     // NEU: State für die ursprünglichen Mengen, um Änderungen zu erkennen
     const [initialQuantities, setInitialQuantities] = useState({});
-    const [localMode, setLocalMode] = useState(false); // Offline-Modus
     const { token } = useAuth();
 
     useEffect(() => {
