@@ -1,6 +1,5 @@
 # Standard Abhängigkeiten
 node_modules/
-package-lock.json
 
 # Production builds
 frontend/build/
