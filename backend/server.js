@@ -50,11 +50,12 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Server starten
-app.listen(PORT, () => {
+const os = require('os');
+const ip = os.networkInterfaces();
+app.listen(PORT, '0.0.0.0', () => {
     console.log('='.repeat(50));
     console.log(`✅ Server läuft auf Port ${PORT}`);
-    console.log(`🌐 API erreichbar unter: http://localhost:${PORT}/api`);
-    console.log(`📊 Health Check: http://localhost:${PORT}/api/health`);
+    console.log(`🌐 API erreichbar unter: http://[DEINE ÖFFENTLICHE AWS-IP]:${PORT}/api`);
     console.log('='.repeat(50));
 });
+
