@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/KS-Installationen-ProductManager/static/css/main.5d74f2c4.css",
-    "main.js": "/KS-Installationen-ProductManager/static/js/main.7012a616.js",
+    "main.js": "/KS-Installationen-ProductManager/static/js/main.c8fc44fc.js",
     "index.html": "/KS-Installationen-ProductManager/index.html",
     "main.5d74f2c4.css.map": "/KS-Installationen-ProductManager/static/css/main.5d74f2c4.css.map",
-    "main.7012a616.js.map": "/KS-Installationen-ProductManager/static/js/main.7012a616.js.map"
+    "main.c8fc44fc.js.map": "/KS-Installationen-ProductManager/static/js/main.c8fc44fc.js.map"
   },
   "entrypoints": [
     "static/css/main.5d74f2c4.css",
-    "static/js/main.7012a616.js"
+    "static/js/main.c8fc44fc.js"
   ]
 }
