@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import os from 'os';
+
 
 // Routes importieren
 import authRoutes from './routes/auth.js';
@@ -50,7 +52,7 @@ app.use((err, req, res, next) => {
     });
 });
 
-const os = require('os');
+// const os = require('os');
 const ip = os.networkInterfaces();
 app.listen(PORT, '0.0.0.0', () => {
     console.log('='.repeat(50));

@@ -1,4 +1,4 @@
-import { DatabaseSync } from 'node:sqlite';
+import Database from 'better-sqlite3';
 import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Datenbank initialisieren (Node.js native)
-const db = new DatabaseSync(join(__dirname, 'database.sqlite'));
+const db = new Database(join(__dirname, 'database.sqlite'));
 
 // Tabellen erstellen
 const initDatabase = () => {
