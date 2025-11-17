@@ -47,7 +47,7 @@ function AppRoutes() {
 
 function App() {
   return (
-    <Router>
+    <Router basename="/KS-Installationen-ProductManager">
       <ThemeProvider>
         <AuthProvider>
           <AppRoutes />
