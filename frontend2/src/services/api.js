@@ -1,4 +1,4 @@
-const API_BASE = 'http://16.170.207.80:5000/api'; // Deine EC2 IP und Port
+const API_BASE = 'https://kansas-mustang-powerful-assure.trycloudflare.com/api';
 
 export async function apiCall(endpoint, options = {}) {
     const token = options.token || null;
